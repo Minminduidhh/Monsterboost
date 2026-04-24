@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Buddy Bird</title>
+<style>
+/* ===== Global Styles ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== Canvas Container ===== */
+#gameWrapper {
+  position: relative;
+  width: 400px;
+  height: 600px;
+}
+
+canvas {
+  display: block;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+/* ===== Shop Overlay ===== */
+#shopOverlay {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 400px; height: 600px;
+  background: rgba(0, 0, 0, 0.92);
+  border-radius: 12px;
+  z-index: 10;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px;
+  overflow-y: auto;
+}
+
+#shopOverlay.active { display: flex; }
+
+#shopOverlay h2 {
+  color: #ffd700;
+  font-size: 28px;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+
+.shop-coins {
+  color: #ffd700;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* ===== Shop Item Grid ===== */
+.shop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+  padding: 0 5px;
+}
+
+.shop-item {
+  background: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  padding: 16px 10px;
+  text-align: center;
+  transition: transform 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+
+.shop-item:hover { transform: scale(1.04); border-color: #60a5fa; }
+.shop-item.owned { border-color: #22c55e; }
+.shop-item.selected { border-color: #ffd700; box-shadow: 0 0 12px rgba(255,215,0,0.3); }
+
+.bird-preview {
+  width: 48px; height: 36px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+}
+
+.shop-item .name {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.shop-item .price {
+  color: #ffd700;
+  font-size: 13px;
+}
+
+.shop-item .status {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.status.owned-text { color: #22c55e; }
+.status.equipped-text { color: #ffd700; }
+
+/* ===== Shop Buttons ===== */
+.shop-btn {
+  margin-top: 20px;
+  padding: 12px 36px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.shop-btn:hover { opacity: 0.85; }
+
+#closeShopBtn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 420px) {
+  #gameWrapper { width: 100vw; height: 100vh; }
+  canvas { border-radius: 0; width: 100vw; height: 100vh; }
+  #shopOverlay { width: 100vw; height: 100vh; border-radius: 0; }
+}
+</style>
+</head>
+<body>
+
+<div id="gameWrapper">
+  <!-- ===== Game Canvas ===== -->
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <!-- ===== Shop UI Overlay ===== -->
+  <div id="shopOverlay">
+    <h2>Shop</h2>
+    <div class="shop-coins">Coins: <span id="shopCoinDisplay">0</span></div>
+    <div class="shop-grid" id="shopGrid"></div>
+    <button class="shop-btn" id="closeShopBtn">Close</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Buddy Bird - Flappy Bird Style Game
+// HTML, CSS, JavaScript - Single File
+// ============================================================
+
+// ===== Canvas Setup =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;   // Canvas width (400)
+const H = canvas.height;  // Canvas height (600)
+
+// ===== Game States =====
+const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2 };
+let gameState = STATE.MENU;
+
+// ===== Bird Colors (Shop Items) =====
+// name: display name, body/wing/eye: colors, price: coin cost
+const BIRD_SKINS = [
+  { id: 'default',  name: 'Classic',     body: '#f5c542', wing: '#e6a817', eye: '#ffffff', price: 0 },
+  { id: 'blue',     name: 'Sky Blue',    body: '#3b82f6', wing: '#2563eb', eye: '#ffffff', price: 15 },
+  { id: 'red',      name: 'Fire Red',    body: '#ef4444', wing: '#dc2626', eye: '#ffffff', price: 20 },
+  { id: 'green',    name: 'Forest',      body: '#22c55e', wing: '#16a34a', eye: '#ffffff', price: 20 },
+  { id: 'purple',   name: 'Royal',       body: '#a855f7', wing: '#9333ea', eye: '#ffffff', price: 30 },
+  { id: 'pink',     name: 'Sakura',      body: '#ec4899', wing: '#db2777', eye: '#ffffff', price: 30 },
+  { id: 'orange',   name: 'Sunset',      body: '#f97316', wing: '#ea580c', eye: '#ffffff', price: 25 },
+  { id: 'cyan',     name: 'Ice',         body: '#06b6d4', wing: '#0891b2', eye: '#ffffff', price: 35 },
+  { id: 'gold',     name: 'Golden',      body: '#fbbf24', wing: '#f59e0b', eye: '#ff0000', price: 50 },
+  { id: 'rainbow',  name: 'Rainbow',     body: '#ff6b6b', wing: '#4ecdc4', eye: '#ffe66d', price: 100 },
+];
+
+// ===== Persistent Data (LocalStorage) =====
+// Save/load coins and owned skins
+function loadSaveData() {
+  try {
+    const data = JSON.parse(localStorage.getItem('buddyBirdSave'));
+    if (data) {
+      totalCoins = data.coins || 0;
+      ownedSkins = data.owned || ['default'];
+      equippedSkin = data.equipped || 'default';
+      highScore = data.highScore || 0;
+    }
+  } catch(e) {
+    // First time playing or corrupted data
+    totalCoins = 0;
+    ownedSkins = ['default'];
+    equippedSkin = 'default';
+    highScore = 0;
+  }
+}
+
+function saveSaveData() {
+  localStorage.setItem('buddyBirdSave', JSON.stringify({
+    coins: totalCoins,
+    owned: ownedSkins,
+    equipped: equippedSkin,
+    highScore: highScore
+  }));
+}
+
+// ===== Game Variables =====
+let totalCoins = 0;         // Total coins collected across sessions
+let ownedSkins = ['default'];
+let equippedSkin = 'default';
+let highScore = 0;
+
+// Per-round variables
+let bird, pipes, coins, score, coinCount, frameCount;
+let bgOffset = 0;           // Parallax background scroll offset
+let groundOffset = 0;       // Ground scroll offset
+
+// ===== Physics Constants =====
+const GRAVITY = 0.45;       // Gravity pull per frame
+const FLAP_POWER = -7.5;    // Upward velocity on flap
+const PIPE_SPEED = 2.5;     // Pipe horizontal speed
+const PIPE_GAP = 150;       // Vertical gap between top/bottom pipes
+const PIPE_WIDTH = 60;      // Pipe width
+const PIPE_INTERVAL = 100;  // Frames between new pipe spawns
+
+// ===== Bird Object =====
+function createBird() {
+  return {
+    x: 80,
+    y: H / 2,
+    w: 34,
+    h: 26,
+    vy: 0,            // Vertical velocity
+    rotation: 0,      // Visual tilt angle
+    flapFrame: 0      // Animation frame for wing flapping
+  };
+}
+
+// ===== Initialize/Reset Game Round =====
+function resetGame() {
+  bird = createBird();
+  pipes = [];
+  coins = [];
+  score = 0;
+  coinCount = 0;
+  frameCount = 0;
+}
+
+// ===== Pipe Generation =====
+// Pipes spawn from the right side with random gap positions
+function spawnPipe() {
+  // Random Y position for the gap center
+  const minY = 80;
+  const maxY = H - 140 - PIPE_GAP;
+  const gapTop = minY + Math.random() * (maxY - minY);
+
+  pipes.push({
+    x: W + 10,
+    gapTop: gapTop,
+    gapBottom: gapTop + PIPE_GAP,
+    scored: false       // Track if bird has passed this pipe
+  });
+
+  // Spawn a coin in the gap (70% chance)
+  if (Math.random() < 0.7) {
+    coins.push({
+      x: W + 10 + PIPE_WIDTH / 2,
+      y: gapTop + PIPE_GAP / 2 + (Math.random() - 0.5) * 40,
+      r: 12,
+      collected: false,
+      bobOffset: Math.random() * Math.PI * 2  // Floating animation offset
+    });
+  }
+}
+
+// ===== Collision Detection =====
+function checkCollision() {
+  // Ground collision (ground is at H - 80)
+  if (bird.y + bird.h / 2 >= H - 80) return true;
+  // Ceiling collision
+  if (bird.y - bird.h / 2 <= 0) return true;
+
+  // Pipe collision
+  for (let p of pipes) {
+    if (bird.x + bird.w / 2 > p.x && bird.x - bird.w / 2 < p.x + PIPE_WIDTH) {
+      // Bird is horizontally within pipe bounds
+      if (bird.y - bird.h / 2 < p.gapTop || bird.y + bird.h / 2 > p.gapBottom) {
+        return true;  // Hit top or bottom pipe
+      }
+    }
+  }
+  return false;
+}
+
+// ===== Coin Collection Detection =====
+function checkCoinCollection() {
+  for (let c of coins) {
+    if (c.collected) continue;
+    const dx = bird.x - c.x;
+    const dy = bird.y - c.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < c.r + 14) {
+      c.collected = true;
+      coinCount++;
+      totalCoins++;
+    }
+  }
+}
+
+// ===== Get Current Bird Skin Colors =====
+function getCurrentSkin() {
+  return BIRD_SKINS.find(s => s.id === equippedSkin) || BIRD_SKINS[0];
+}
+
+// ============================================================
+// DRAWING FUNCTIONS
+// ============================================================
+
+// ===== Draw Scrolling Background =====
+function drawBackground() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#87CEEB');    // Light sky blue
+  grad.addColorStop(0.6, '#E0F7FA');  // Lighter near horizon
+  grad.addColorStop(1, '#81C784');    // Greenish at bottom
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Clouds (parallax scrolling)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i * 120 + 50) - bgOffset * 0.3) % (W + 100) - 50;
+    const cy = 60 + i * 45;
+    drawCloud(cx, cy, 30 + i * 5);
+  }
+
+  // Distant hills
+  ctx.fillStyle = '#66BB6A';
+  ctx.beginPath();
+  ctx.moveTo(0, H - 80);
+  for (let x = 0; x <= W; x += 20) {
+    ctx.lineTo(x, H - 100 - Math.sin((x + bgOffset * 0.2) * 0.02) * 25);
+  }
+  ctx.lineTo(W, H - 80);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ===== Draw a Simple Cloud Shape =====
+function drawCloud(x, y, size) {
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
+  ctx.arc(x + size * 0.5, y - size * 0.2, size * 0.5, 0, Math.PI * 2);
+  ctx.arc(x + size, y, size * 0.55, 0, Math.PI * 2);
+  ctx.arc(x + size * 0.5, y + size * 0.1, size * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ===== Draw Ground =====
+function drawGround() {
+  // Main ground
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(0, H - 80, W, 80);
+
+  // Grass on top
+  ctx.fillStyle = '#4CAF50';
+  ctx.fillRect(0, H - 80, W, 16);
+
+  // Grass detail lines
+  ctx.strokeStyle = '#388E3C';
+  ctx.lineWidth = 2;
+  for (let x = -groundOffset % 20; x < W; x += 20) {
+    ctx.beginPath();
+    ctx.moveTo(x, H - 80);
+    ctx.lineTo(x + 6, H - 90);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 10, H - 80);
+    ctx.lineTo(x + 16, H - 86);
+    ctx.stroke();
+  }
+}
+
+// ===== Draw Bird =====
+function drawBird() {
+  const skin = getCurrentSkin();
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+
+  // Tilt bird based on velocity
+  bird.rotation = Math.min(Math.max(bird.vy * 3, -30), 70);
+  ctx.rotate(bird.rotation * Math.PI / 180);
+
+  // Body
+  ctx.fillStyle = skin.body;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, bird.w / 2, bird.h / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Wing (animated flap)
+  ctx.fillStyle = skin.wing;
+  const wingY = Math.sin(bird.flapFrame * 0.4) * 5;
+  ctx.beginPath();
+  ctx.ellipse(-4, wingY + 2, 10, 6, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = skin.eye;
+  ctx.beginPath();
+  ctx.arc(10, -4, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pupil
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(11.5, -4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#FF8C00';
+  ctx.beginPath();
+  ctx.moveTo(16, -1);
+  ctx.lineTo(24, 2);
+  ctx.lineTo(16, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ===== Draw Pipes =====
+function drawPipes() {
+  for (let p of pipes) {
+    // Pipe body gradient
+    const pipeGrad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_WIDTH, 0);
+    pipeGrad.addColorStop(0, '#2E7D32');
+    pipeGrad.addColorStop(0.5, '#4CAF50');
+    pipeGrad.addColorStop(1, '#2E7D32');
+
+    // Top pipe
+    ctx.fillStyle = pipeGrad;
+    ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapTop);
+
+    // Top pipe cap
+    ctx.fillStyle = '#388E3C';
+    ctx.fillRect(p.x - 4, p.gapTop - 24, PIPE_WIDTH + 8, 24);
+    ctx.strokeStyle = '#1B5E20';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x - 4, p.gapTop - 24, PIPE_WIDTH + 8, 24);
+
+    // Bottom pipe
+    ctx.fillStyle = pipeGrad;
+    ctx.fillRect(p.x, p.gapBottom, PIPE_WIDTH, H - p.gapBottom);
+
+    // Bottom pipe cap
+    ctx.fillStyle = '#388E3C';
+    ctx.fillRect(p.x - 4, p.gapBottom, PIPE_WIDTH + 8, 24);
+    ctx.strokeStyle = '#1B5E20';
+    ctx.strokeRect(p.x - 4, p.gapBottom, PIPE_WIDTH + 8, 24);
+
+    // Pipe highlights for 3D effect
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(p.x + 4, 0, 8, p.gapTop);
+    ctx.fillRect(p.x + 4, p.gapBottom, 8, H - p.gapBottom);
+  }
+}
+
+// ===== Draw Coins =====
+function drawCoins() {
+  for (let c of coins) {
+    if (c.collected) continue;
+
+    // Floating bob animation
+    const bobY = Math.sin(frameCount * 0.06 + c.bobOffset) * 4;
+
+    ctx.save();
+    ctx.translate(c.x, c.y + bobY);
+
+    // Coin glow
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(0, 0, c.r + 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Coin body
+    const coinGrad = ctx.createRadialGradient(-2, -2, 1, 0, 0, c.r);
+    coinGrad.addColorStop(0, '#FFF176');
+    coinGrad.addColorStop(0.7, '#FFD700');
+    coinGrad.addColorStop(1, '#FFA000');
+    ctx.fillStyle = coinGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Coin border
+    ctx.strokeStyle = '#E65100';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Dollar sign on coin
+    ctx.fillStyle = '#B8860B';
+    ctx.font = 'bold 13px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 0, 0);
+
+    ctx.restore();
+  }
+}
+
+// ===== Draw Score & Coin Count HUD =====
+function drawHUD() {
+  // Score (center top)
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 4;
+  ctx.font = 'bold 40px Arial';
+  ctx.textAlign = 'center';
+  ctx.strokeText(score, W / 2, 55);
+  ctx.fillText(score, W / 2, 55);
+
+  // Coin count (top-left)
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'left';
+  ctx.lineWidth = 3;
+
+  // Coin icon
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(28, 28, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#B8860B';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#B8860B';
+  ctx.font = 'bold 10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('$', 28, 29);
+
+  // Coin number
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'left';
+  ctx.strokeText(totalCoins, 44, 33);
+  ctx.fillText(totalCoins, 44, 33);
+}
+
+// ===== Draw Menu Screen =====
+function drawMenu() {
+  drawBackground();
+  drawGround();
+
+  // Floating bird animation on menu
+  const menuBirdY = H / 2.5 + Math.sin(Date.now() * 0.003) * 15;
+  const origY = bird.y;
+  bird.y = menuBirdY;
+  bird.x = W / 2;
+  bird.flapFrame = Date.now() * 0.01;
+  bird.vy = 0;
+  drawBird();
+  bird.y = origY;
+
+  // Title
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#2E7D32';
+  ctx.lineWidth = 6;
+  ctx.font = 'bold 46px Arial';
+  ctx.textAlign = 'center';
+  ctx.strokeText('Buddy Bird', W / 2, 90);
+  ctx.fillText('Buddy Bird', W / 2, 90);
+
+  // Tap to play instruction
+  ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + Math.sin(Date.now() * 0.004) * 0.4) + ')';
+  ctx.font = '20px Arial';
+  ctx.fillText('Tap or Click to Play', W / 2, H / 2 + 60);
+
+  // High score display
+  if (highScore > 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Best: ' + highScore, W / 2, H / 2 + 95);
+  }
+
+  // Shop button
+  drawShopButton();
+
+  // Total coins display
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Coins: ' + totalCoins, W / 2, H - 100);
+}
+
+// ===== Draw Shop Button on Menu =====
+function drawShopButton() {
+  const bx = W / 2 - 60, by = H - 160, bw = 120, bh = 40;
+
+  // Button background
+  const btnGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+  btnGrad.addColorStop(0, '#9333ea');
+  btnGrad.addColorStop(1, '#7c3aed');
+  ctx.fillStyle = btnGrad;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
+
+  // Button border
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Button text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Shop', W / 2, by + bh / 2);
+  ctx.textBaseline = 'alphabetic';
+
+  // Store button bounds for click detection
+  shopBtnBounds = { x: bx, y: by, w: bw, h: bh };
+}
+
+let shopBtnBounds = { x: 0, y: 0, w: 0, h: 0 };
+
+// ===== Draw Game Over Screen =====
+function drawGameOver() {
+  // Dark overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Game Over panel
+  const px = W / 2 - 130, py = H / 2 - 110, pw = 260, ph = 220;
+  ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // "Game Over" title
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 34px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Game Over', W / 2, py + 48);
+
+  // Score
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '20px Arial';
+  ctx.fillText('Score: ' + score, W / 2, py + 85);
+
+  // Coins earned this round
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '18px Arial';
+  ctx.fillText('Coins: +' + coinCount, W / 2, py + 115);
+
+  // High score
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '16px Arial';
+  ctx.fillText('Best: ' + highScore, W / 2, py + 145);
+
+  // Restart instruction
+  ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + Math.sin(Date.now() * 0.004) * 0.4) + ')';
+  ctx.font = '16px Arial';
+  ctx.fillText('Tap to Restart', W / 2, py + 190);
+}
+
+// ============================================================
+// GAME LOGIC UPDATE
+// ============================================================
+
+function update() {
+  if (gameState !== STATE.PLAYING) return;
+
+  frameCount++;
+  bgOffset += PIPE_SPEED * 0.5;
+  groundOffset += PIPE_SPEED;
+
+  // Bird physics
+  bird.vy += GRAVITY;
+  bird.y += bird.vy;
+  bird.flapFrame++;
+
+  // Spawn new pipes at interval
+  if (frameCount % PIPE_INTERVAL === 0) {
+    spawnPipe();
+  }
+
+  // Move pipes left
+  for (let p of pipes) {
+    p.x -= PIPE_SPEED;
+
+    // Score when bird passes a pipe
+    if (!p.scored && p.x + PIPE_WIDTH < bird.x) {
+      p.scored = true;
+      score++;
+    }
+  }
+
+  // Move coins with pipes
+  for (let c of coins) {
+    c.x -= PIPE_SPEED;
+  }
+
+  // Remove off-screen pipes and coins
+  pipes = pipes.filter(p => p.x + PIPE_WIDTH > -10);
+  coins = coins.filter(c => c.x > -30 && !c.collected);
+
+  // Check coin collection
+  checkCoinCollection();
+
+  // Check collisions
+  if (checkCollision()) {
+    gameState = STATE.GAMEOVER;
+    if (score > highScore) highScore = score;
+    saveSaveData();  // Save coins and high score
+  }
+}
+
+// ============================================================
+// MAIN GAME LOOP (60fps)
+// ============================================================
+
+function gameLoop() {
+  update();
+
+  // Draw based on current state
+  if (gameState === STATE.MENU) {
+    drawMenu();
+  } else if (gameState === STATE.PLAYING) {
+    drawBackground();
+    drawPipes();
+    drawCoins();
+    drawGround();
+    drawBird();
+    drawHUD();
+  } else if (gameState === STATE.GAMEOVER) {
+    drawBackground();
+    drawPipes();
+    drawCoins();
+    drawGround();
+    drawBird();
+    drawHUD();
+    drawGameOver();
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+
+// Flap action
+function flap() {
+  if (gameState === STATE.PLAYING) {
+    bird.vy = FLAP_POWER;
+  }
+}
+
+// Canvas click/tap handler
+canvas.addEventListener('click', function(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  if (gameState === STATE.MENU) {
+    // Check if Shop button was clicked
+    if (mx >= shopBtnBounds.x && mx <= shopBtnBounds.x + shopBtnBounds.w &&
+        my >= shopBtnBounds.y && my <= shopBtnBounds.y + shopBtnBounds.h) {
+      openShop();
+      return;
+    }
+    // Start the game
+    resetGame();
+    gameState = STATE.PLAYING;
+  } else if (gameState === STATE.PLAYING) {
+    flap();
+  } else if (gameState === STATE.GAMEOVER) {
+    gameState = STATE.MENU;
+  }
+});
+
+// Keyboard support (Space / Up Arrow)
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (gameState === STATE.PLAYING) {
+      flap();
+    } else if (gameState === STATE.MENU) {
+      resetGame();
+      gameState = STATE.PLAYING;
+    } else if (gameState === STATE.GAMEOVER) {
+      gameState = STATE.MENU;
+    }
+  }
+});
+
+// ============================================================
+// SHOP SYSTEM
+// ============================================================
+
+const shopOverlay = document.getElementById('shopOverlay');
+const shopGrid = document.getElementById('shopGrid');
+const shopCoinDisplay = document.getElementById('shopCoinDisplay');
+const closeShopBtn = document.getElementById('closeShopBtn');
+
+// Open shop overlay
+function openShop() {
+  shopCoinDisplay.textContent = totalCoins;
+  renderShopItems();
+  shopOverlay.classList.add('active');
+}
+
+// Close shop overlay
+function closeShop() {
+  shopOverlay.classList.remove('active');
+}
+
+closeShopBtn.addEventListener('click', closeShop);
+
+// Render shop item grid
+function renderShopItems() {
+  shopGrid.innerHTML = '';
+
+  BIRD_SKINS.forEach(skin => {
+    const item = document.createElement('div');
+    item.className = 'shop-item';
+
+    const isOwned = ownedSkins.includes(skin.id);
+    const isEquipped = equippedSkin === skin.id;
+
+    if (isEquipped) item.classList.add('selected');
+    else if (isOwned) item.classList.add('owned');
+
+    // Bird color preview
+    item.innerHTML = `
+      <div class="bird-preview" style="background: ${skin.body}; border: 2px solid ${skin.wing};"></div>
+      <div class="name">${skin.name}</div>
+      ${isEquipped
+        ? '<div class="status equipped-text">Equipped</div>'
+        : isOwned
+          ? '<div class="status owned-text">Owned</div>'
+          : `<div class="price">${skin.price} Coins</div>`
+      }
+    `;
+
+    // Click handler for buy/equip
+    item.addEventListener('click', () => {
+      if (isEquipped) return; // Already equipped
+
+      if (isOwned) {
+        // Equip this skin
+        equippedSkin = skin.id;
+        saveSaveData();
+        renderShopItems();
+      } else {
+        // Try to buy
+        if (totalCoins >= skin.price) {
+          totalCoins -= skin.price;
+          ownedSkins.push(skin.id);
+          equippedSkin = skin.id;
+          saveSaveData();
+          shopCoinDisplay.textContent = totalCoins;
+          renderShopItems();
+        } else {
+          // Not enough coins - flash effect
+          item.style.borderColor = '#ef4444';
+          item.style.transition = 'border-color 0.3s';
+          setTimeout(() => { item.style.borderColor = ''; }, 500);
+        }
+      }
+    });
+
+    shopGrid.appendChild(item);
+  });
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+loadSaveData();   // Load saved coins, skins, high score
+resetGame();      // Set up initial bird/pipe state
+gameLoop();       // Start the game loop
+
+</script>
+</body>
+</html>
