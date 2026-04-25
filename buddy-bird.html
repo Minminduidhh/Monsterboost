@@ -2,82 +2,83 @@
 <html lang="my">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Spider Bird</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: #1a1a2e;
-  display: flex; justify-content: center; align-items: center;
-  height: 100vh; overflow: hidden;
+html, body {
+  background: #0f0f23;
+  width: 100%; height: 100%;
+  overflow: hidden;
   font-family: 'Segoe UI', Arial, sans-serif;
   user-select: none; -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-#gameWrapper { position: relative; width: 400px; height: 600px; }
+#gameWrapper {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+}
 canvas {
-  display: block; border-radius: 12px;
-  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  display: block;
+  max-width: 100vw; max-height: 100vh;
   cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none;
 }
 
 /* ===== Shop Overlay ===== */
 #shopOverlay {
-  display: none; position: absolute; top: 0; left: 0;
-  width: 400px; height: 600px;
-  background: rgba(0, 0, 0, 0.94);
-  border-radius: 12px; z-index: 10;
+  display: none; position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.95);
+  z-index: 10;
   flex-direction: column; align-items: center;
-  padding: 18px 12px 12px; overflow-y: auto;
+  padding: 14px 10px 10px; overflow-y: auto;
 }
 #shopOverlay.active { display: flex; }
 .shop-header {
-  width: 100%; display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px; padding: 0 4px;
+  width: 100%; max-width: 380px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; padding: 0 2px;
 }
-.shop-title { color: #ffd700; font-size: 22px; font-weight: bold; }
-.shop-coins-display { color: #ffd700; font-size: 16px; }
+.shop-title { color: #ffd700; font-size: 20px; font-weight: bold; }
+.shop-coins-display { color: #ffd700; font-size: 15px; font-weight: bold; }
 .shop-grid {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px; width: 100%; padding: 0 2px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; width: 100%; max-width: 380px; padding: 0 2px;
 }
 .shop-item {
-  background: #1e293b; border: 2px solid #334155;
-  border-radius: 10px; padding: 8px 4px; text-align: center;
-  cursor: pointer; transition: transform 0.12s, border-color 0.12s;
+  background: #1a2235; border: 2px solid #2a3a55;
+  border-radius: 8px; padding: 6px 3px; text-align: center;
+  cursor: pointer; transition: transform 0.1s, border-color 0.1s;
 }
 .shop-item:hover { transform: scale(1.03); border-color: #60a5fa; }
 .shop-item.owned { border-color: #22c55e; }
-.shop-item.selected { border-color: #ffd700; box-shadow: 0 0 8px rgba(255,215,0,0.3); }
-.shop-item .name { color: #e2e8f0; font-size: 11px; font-weight: 600; margin: 4px 0 2px; }
-.shop-item .price { color: #ffd700; font-size: 11px; }
-.shop-item .status { font-size: 10px; margin-top: 2px; }
-.status.owned-text { color: #22c55e; }
+.shop-item.selected { border-color: #ffd700; box-shadow: 0 0 6px rgba(255,215,0,0.3); }
+.bird-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  margin: 0 auto 3px; border: 1.5px solid rgba(255,255,255,0.15);
+}
+.shop-item .name { color: #cbd5e1; font-size: 9px; font-weight: 600; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-item .price { color: #ffd700; font-size: 9px; }
+.shop-item .status { font-size: 8px; margin-top: 1px; }
 .status.equipped-text { color: #ffd700; }
 .shop-action-btn {
-  display: inline-block; margin-top: 4px; padding: 4px 14px;
-  border: none; border-radius: 6px; font-size: 11px; font-weight: bold;
+  display: inline-block; margin-top: 3px; padding: 3px 8px;
+  border: none; border-radius: 4px; font-size: 9px; font-weight: bold;
   cursor: pointer; color: white;
 }
 .btn-buy { background: #3b82f6; }
 .btn-equip { background: #22c55e; }
-.btn-equipped { background: #6b7280; cursor: default; }
 .shop-close {
-  margin-top: 12px; padding: 10px 30px; border: none; border-radius: 8px;
-  font-size: 15px; font-weight: bold; cursor: pointer;
+  margin-top: 10px; padding: 8px 28px; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: bold; cursor: pointer;
   background: linear-gradient(135deg, #ef4444, #dc2626); color: white;
-}
-
-@media (max-width: 420px) {
-  #gameWrapper { width: 100vw; height: 100vh; }
-  canvas { border-radius: 0; width: 100vw; height: 100vh; }
-  #shopOverlay { width: 100vw; height: 100vh; border-radius: 0; }
 }
 </style>
 </head>
 <body>
 <div id="gameWrapper">
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <canvas id="gameCanvas" width="400" height="700"></canvas>
   <div id="shopOverlay">
     <div class="shop-header">
       <span class="shop-title">🕷️ Shop</span>
@@ -98,18 +99,18 @@ let gameState = STATE.MENU;
 
 // ===== Bird Skins =====
 const BIRD_SKINS = [
-  { id: 'default',  name: 'Red Spider',    body: '#ef4444', belly: '#fbbf24', brow: '#8b0000', beak: '#ff8c00', price: 0 },
-  { id: 'blue',     name: 'Blue Spider',   body: '#3b82f6', belly: '#93c5fd', brow: '#1e3a5f', beak: '#f97316', price: 15 },
-  { id: 'yellow',   name: 'Yellow Spider',  body: '#facc15', belly: '#fef9c3', brow: '#854d0e', beak: '#ea580c', price: 20 },
-  { id: 'green',    name: 'Green Spider',   body: '#22c55e', belly: '#bbf7d0', brow: '#14532d', beak: '#f97316', price: 25 },
-  { id: 'pink',     name: 'Pink Spider',    body: '#ec4899', belly: '#fbcfe8', brow: '#831843', beak: '#f97316', price: 30 },
-  { id: 'purple',   name: 'Purple Spider',  body: '#a855f7', belly: '#e9d5ff', brow: '#581c87', beak: '#fb923c', price: 40 },
-  { id: 'orange',   name: 'Orange Spider',  body: '#f97316', belly: '#fed7aa', brow: '#7c2d12', beak: '#dc2626', price: 45 },
-  { id: 'cyan',     name: 'Ice Spider',     body: '#06b6d4', belly: '#a5f3fc', brow: '#164e63', beak: '#f97316', price: 55 },
-  { id: 'gold',     name: 'Golden Spider',  body: '#fbbf24', belly: '#fef3c7', brow: '#78350f', beak: '#dc2626', price: 70 },
-  { id: 'black',    name: 'Black Spider',   body: '#1e1e1e', belly: '#4b5563', brow: '#000000', beak: '#f97316', price: 80 },
-  { id: 'rainbow',  name: 'Rainbow Spider', body: '#ff6b6b', belly: '#ffe66d', brow: '#4ecdc4', beak: '#ff8c00', price: 99 },
-  { id: 'minspider', name: 'Min Spider',   body: '#dc2626', belly: '#1e40af', brow: '#000000', beak: '#f97316', price: 300, isSpiderman: true },
+  { id: 'default',  name: 'Red',      body: '#ef4444', belly: '#fbbf24', brow: '#8b0000', beak: '#ff8c00', price: 0 },
+  { id: 'blue',     name: 'Blue',     body: '#3b82f6', belly: '#93c5fd', brow: '#1e3a5f', beak: '#f97316', price: 15 },
+  { id: 'yellow',   name: 'Yellow',   body: '#facc15', belly: '#fef9c3', brow: '#854d0e', beak: '#ea580c', price: 20 },
+  { id: 'green',    name: 'Green',    body: '#22c55e', belly: '#bbf7d0', brow: '#14532d', beak: '#f97316', price: 25 },
+  { id: 'pink',     name: 'Pink',     body: '#ec4899', belly: '#fbcfe8', brow: '#831843', beak: '#f97316', price: 30 },
+  { id: 'purple',   name: 'Purple',   body: '#a855f7', belly: '#e9d5ff', brow: '#581c87', beak: '#fb923c', price: 40 },
+  { id: 'orange',   name: 'Orange',   body: '#f97316', belly: '#fed7aa', brow: '#7c2d12', beak: '#dc2626', price: 45 },
+  { id: 'cyan',     name: 'Ice',      body: '#06b6d4', belly: '#a5f3fc', brow: '#164e63', beak: '#f97316', price: 55 },
+  { id: 'gold',     name: 'Gold',     body: '#fbbf24', belly: '#fef3c7', brow: '#78350f', beak: '#dc2626', price: 70 },
+  { id: 'black',    name: 'Black',    body: '#1e1e1e', belly: '#4b5563', brow: '#000000', beak: '#f97316', price: 80 },
+  { id: 'rainbow',  name: 'Rainbow',  body: '#ff6b6b', belly: '#ffe66d', brow: '#4ecdc4', beak: '#ff8c00', price: 99 },
+  { id: 'minspider', name: 'Min Spider', body: '#dc2626', belly: '#1e40af', brow: '#000000', beak: '#f97316', price: 300, isSpiderman: true },
 ];
 
 // ===== Save/Load =====
@@ -133,7 +134,6 @@ const GRAVITY = 0.45, FLAP_POWER = -7.5, PIPE_SPEED = 2.5;
 const PIPE_GAP = 160, PIPE_WIDTH = 60, PIPE_INTERVAL = 100;
 
 function getCurrentWorld() {
-  // Alternates every 20 scores: 0-19 = world1, 20-39 = world2, 40-59 = world1...
   return (Math.floor(score / 20) % 2 === 0) ? 1 : 2;
 }
 
@@ -225,7 +225,7 @@ function drawGround() {
   }
 }
 
-// ===== Draw Bird (improved graphics) =====
+// ===== Draw Bird =====
 function drawBird() {
   const skin = getCurrentSkin();
   const isRainbow = skin.id === 'rainbow';
@@ -248,75 +248,64 @@ function drawBird() {
     g.addColorStop(0.6,'#ff9ff3'); g.addColorStop(0.8,'#54a0ff'); g.addColorStop(1,'#5f27cd');
     ctx.fillStyle = g;
   } else if (isSpiderman) {
-    // Spider-Man: red top, blue bottom
-    const g = ctx.createLinearGradient(0, -R, 0, R);
-    g.addColorStop(0, '#dc2626'); g.addColorStop(0.5, '#dc2626'); g.addColorStop(0.5, '#1e40af'); g.addColorStop(1, '#1e40af');
-    ctx.fillStyle = g;
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
+    // Blue mask area (lower half)
+    ctx.fillStyle = '#1e40af';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0.15*Math.PI, 0.85*Math.PI); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
+    // Web lines radiating from center
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.7;
+    for (let a = 0; a < Math.PI*2; a += Math.PI/6) {
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a)*R, Math.sin(a)*R); ctx.stroke();
+    }
+    // Web arcs
+    for (let d = 5; d < R; d += 5) {
+      ctx.beginPath(); ctx.arc(0, 0, d, 0, Math.PI*2); ctx.stroke();
+    }
+    // Spider-Man eyes (large angular white)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(-10, -5); ctx.lineTo(-4, -10); ctx.lineTo(-1, -3); ctx.lineTo(-6, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(10, -5); ctx.lineTo(4, -10); ctx.lineTo(1, -3); ctx.lineTo(6, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.stroke();
+    // Body outline
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+    return;
   } else {
     ctx.fillStyle = skin.body;
   }
   ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
-
-  // Body outline
   ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
 
-  // Spider web pattern for Min Spider
-  if (isSpiderman) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8;
-    // Vertical line
-    ctx.beginPath(); ctx.moveTo(0, -R); ctx.lineTo(0, R); ctx.stroke();
-    // Horizontal arcs
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath(); ctx.arc(0, i*5, Math.abs(i)*4+6, 0, Math.PI); ctx.stroke();
-    }
-  }
-
   // Belly
-  if (!isSpiderman) {
-    ctx.fillStyle = isRainbow ? '#ffe66d' : skin.belly;
-    ctx.beginPath(); ctx.ellipse(0, R*0.25, R*0.55, R*0.4, 0, 0, Math.PI*2); ctx.fill();
-  }
+  ctx.fillStyle = isRainbow ? '#ffe66d' : skin.belly;
+  ctx.beginPath(); ctx.ellipse(0, R*0.25, R*0.55, R*0.4, 0, 0, Math.PI*2); ctx.fill();
 
   // Head feathers
-  const featherColor = isRainbow ? '#4ecdc4' : isSpiderman ? '#dc2626' : skin.body;
-  ctx.fillStyle = featherColor;
-  ctx.beginPath(); ctx.moveTo(-3, -R+1); ctx.lineTo(-1, -R-8); ctx.lineTo(2, -R+2); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(3, -R); ctx.lineTo(6, -R-6); ctx.lineTo(8, -R+2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = isRainbow ? '#4ecdc4' : skin.body;
+  ctx.beginPath(); ctx.moveTo(-3, -R+1); ctx.lineTo(-1, -R-7); ctx.lineTo(2, -R+2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(3, -R); ctx.lineTo(6, -R-5); ctx.lineTo(8, -R+2); ctx.closePath(); ctx.fill();
 
-  // Eyes - large, expressive
-  const eyeScale = 1.15;
-  // Left eye white
-  ctx.fillStyle = isSpiderman ? '#ffffff' : '#ffffff';
-  ctx.beginPath(); ctx.ellipse(-5, -3, 6*eyeScale, 7*eyeScale, 0, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.5; ctx.stroke();
-  // Right eye white
-  ctx.beginPath(); ctx.ellipse(6, -3, 6*eyeScale, 7*eyeScale, 0, 0, Math.PI*2); ctx.fill();
-  ctx.stroke();
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(-5, -3, 6, 7, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6, -3, 6, 7, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(-3, -2, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(8, -2, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-4, -4, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7, -4, 1.2, 0, Math.PI*2); ctx.fill();
 
-  if (isSpiderman) {
-    // Spider-Man style eyes (angular, no pupil — just white shapes)
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(-9, -6); ctx.lineTo(-2, -9); ctx.lineTo(-1, -1); ctx.lineTo(-7, 1);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(10, -6); ctx.lineTo(3, -9); ctx.lineTo(2, -1); ctx.lineTo(8, 1);
-    ctx.closePath(); ctx.fill();
-    ctx.stroke();
-  } else {
-    // Normal pupils
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.arc(-3, -2, 3.2, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(8, -2, 3.2, 0, Math.PI*2); ctx.fill();
-    // Highlights
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(-4, -4, 1.3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(7, -4, 1.3, 0, Math.PI*2); ctx.fill();
-  }
-
-  // Angry eyebrows
-  ctx.strokeStyle = isRainbow ? '#2d3436' : isSpiderman ? '#000' : skin.brow;
+  // Eyebrows
+  ctx.strokeStyle = isRainbow ? '#2d3436' : skin.brow;
   ctx.lineWidth = 2.5; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(-12, -10); ctx.lineTo(-2, -7); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(13, -10); ctx.lineTo(3, -7); ctx.stroke();
@@ -328,7 +317,7 @@ function drawBird() {
   ctx.beginPath(); ctx.moveTo(4, 5); ctx.lineTo(R+1, 5); ctx.lineTo(4, 9); ctx.closePath(); ctx.fill();
 
   // Tail
-  ctx.fillStyle = isRainbow ? '#6c5ce7' : isSpiderman ? '#1e40af' : darkenColor(skin.body, 20);
+  ctx.fillStyle = isRainbow ? '#6c5ce7' : darkenColor(skin.body, 20);
   ctx.beginPath();
   ctx.moveTo(-R+2, -2); ctx.lineTo(-R-8, -7); ctx.lineTo(-R-6, 0); ctx.lineTo(-R-9, 4); ctx.lineTo(-R+2, 2);
   ctx.closePath(); ctx.fill();
@@ -371,70 +360,82 @@ function drawCoins() {
     if (c.collected) continue;
     const bobY = Math.sin(frameCount*0.06+c.bobOffset)*4;
     ctx.save(); ctx.translate(c.x, c.y+bobY);
-    ctx.fillStyle = 'rgba(255,215,0,0.25)';
-    ctx.beginPath(); ctx.arc(0, 0, c.r+5, 0, Math.PI*2); ctx.fill();
-    const g = ctx.createRadialGradient(-2,-2,1,0,0,c.r);
-    g.addColorStop(0,'#FFF176'); g.addColorStop(0.7,'#FFD700'); g.addColorStop(1,'#FFA000');
+    // Glow
+    ctx.fillStyle = 'rgba(255,215,0,0.2)';
+    ctx.beginPath(); ctx.arc(0, 0, c.r+4, 0, Math.PI*2); ctx.fill();
+    // Coin body
+    const g = ctx.createRadialGradient(-2,-2,2,0,0,c.r);
+    g.addColorStop(0,'#FFF176'); g.addColorStop(0.6,'#FFD700'); g.addColorStop(1,'#E6A800');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, c.r, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#E65100'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#B8860B'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Inner circle
+    ctx.strokeStyle = 'rgba(184,134,11,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, c.r*0.6, 0, Math.PI*2); ctx.stroke();
+    // $ sign
+    ctx.fillStyle = '#8B6914'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('$', 0, 0);
     ctx.restore();
   }
 }
 
+// ===== HUD =====
 function drawHUD() {
-  // Score
+  // Score (center)
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
   ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
   ctx.strokeText(score, W/2, 55); ctx.fillText(score, W/2, 55);
-  // Coins
-  ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(28, 28, 10, 0, Math.PI*2); ctx.fill();
+
+  // Coin icon + count (top-left)
+  const coinX = 16, coinY = 26;
+  const cg = ctx.createRadialGradient(coinX-1, coinY-1, 1, coinX, coinY, 9);
+  cg.addColorStop(0, '#FFF176'); cg.addColorStop(0.6, '#FFD700'); cg.addColorStop(1, '#E6A800');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(coinX, coinY, 9, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = '#B8860B'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText('$', 28, 29);
+  ctx.strokeStyle = 'rgba(184,134,11,0.4)'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.arc(coinX, coinY, 5.5, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#8B6914'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('$', coinX, coinY);
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-  ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left';
-  ctx.strokeText(totalCoins, 44, 33); ctx.fillText(totalCoins, 44, 33);
-  // World indicator
-  const w = getCurrentWorld();
-  if (w === 2) {
-    ctx.fillStyle = '#c084fc'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'right';
-    ctx.fillText('WORLD 2', W-15, 25);
-  }
-  // Pause button (top right)
+  ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.strokeText(totalCoins, coinX+14, coinY); ctx.fillText(totalCoins, coinX+14, coinY);
+
+  // Pause button (next to coins, left side)
   drawPauseButton();
+
+  // World indicator (top right)
+  if (getCurrentWorld() === 2) {
+    ctx.fillStyle = '#c084fc'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillText('WORLD 2', W-12, 14);
+  }
 }
 
-// ===== Pause Button =====
-const PAUSE_BTN = { x: W - 45, y: 35, w: 34, h: 34 };
+// Pause button placed next to coin area
+const PAUSE_BTN = { x: 12, y: 42, w: 28, h: 28 };
 function drawPauseButton() {
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.beginPath(); ctx.roundRect(PAUSE_BTN.x, PAUSE_BTN.y, PAUSE_BTN.w, PAUSE_BTN.h, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.roundRect(PAUSE_BTN.x, PAUSE_BTN.y, PAUSE_BTN.w, PAUSE_BTN.h, 6); ctx.fill();
   ctx.fillStyle = '#ffffff';
-  // Two vertical bars (pause icon)
-  ctx.fillRect(PAUSE_BTN.x + 10, PAUSE_BTN.y + 8, 5, 18);
-  ctx.fillRect(PAUSE_BTN.x + 19, PAUSE_BTN.y + 8, 5, 18);
+  ctx.fillRect(PAUSE_BTN.x + 8, PAUSE_BTN.y + 6, 4, 16);
+  ctx.fillRect(PAUSE_BTN.x + 16, PAUSE_BTN.y + 6, 4, 16);
 }
 
-// ===== Draw Paused Screen =====
 function drawPaused() {
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px Arial'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('PAUSED', W/2, H/2 - 20);
   ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '18px Arial';
   ctx.fillText('Tap to Resume', W/2, H/2 + 20);
 }
 
-// ===== Draw Menu =====
+// ===== Menu =====
 function drawMenu() {
   const savedScore = score;
-  score = 0; // Force world 1 for menu
-  drawBackground();
-  drawGround();
+  score = 0;
+  drawBackground(); drawGround();
   score = savedScore;
 
   // Floating bird
-  const menuBirdY = H/2.5 + Math.sin(Date.now()*0.003)*15;
+  const menuBirdY = H*0.38 + Math.sin(Date.now()*0.003)*15;
   const ox = bird.x, oy = bird.y;
   bird.y = menuBirdY; bird.x = W/2; bird.vy = 0;
   drawBird();
@@ -442,11 +443,11 @@ function drawMenu() {
 
   // Title
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6;
-  ctx.font = 'bold 44px Arial'; ctx.textAlign = 'center';
+  ctx.font = 'bold 44px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.strokeText('Spider Bird', W/2, 85); ctx.fillText('Spider Bird', W/2, 85);
 
-  if (highScore > 0) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Arial'; ctx.fillText('Best: '+highScore, W/2, H/2+50); }
-  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 16px Arial'; ctx.fillText('Coins: '+totalCoins, W/2, H/2+80);
+  if (highScore > 0) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Arial'; ctx.fillText('Best: '+highScore, W/2, H*0.55+30); }
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 16px Arial'; ctx.fillText('🪙 '+totalCoins, W/2, H*0.55+60);
 
   drawMenuButtons();
 }
@@ -456,14 +457,13 @@ const PLAY_BTN = { x: W/2-BTN_W-10, y: BTN_Y, w: BTN_W, h: BTN_H };
 const SHOP_BTN = { x: W/2+10, y: BTN_Y, w: BTN_W, h: BTN_H };
 
 function drawMenuButtons() {
-  // Play
   drawMenuBox(PLAY_BTN.x, PLAY_BTN.y, PLAY_BTN.w, PLAY_BTN.h, '#27ae60', '#2ecc71');
   ctx.fillStyle = '#fff';
   const px = PLAY_BTN.x+PLAY_BTN.w/2, py = PLAY_BTN.y+BTN_H/2-6;
   ctx.beginPath(); ctx.moveTo(px-8,py-10); ctx.lineTo(px+10,py); ctx.lineTo(px-8,py+10); ctx.closePath(); ctx.fill();
   ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.fillText('ဆော့ရန်', px, PLAY_BTN.y+BTN_H-8);
-  // Shop
+
   drawMenuBox(SHOP_BTN.x, SHOP_BTN.y, SHOP_BTN.w, SHOP_BTN.h, '#8e44ad', '#9b59b6');
   const sx = SHOP_BTN.x+SHOP_BTN.w/2, sy = SHOP_BTN.y+BTN_H/2-6;
   ctx.fillStyle = '#fff';
@@ -481,26 +481,15 @@ function drawMenuBox(x, y, w, h, c1, c2) {
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
 }
 
-// ===== Draw Game Over (no box, just text) =====
+// ===== Game Over =====
 function drawGameOver() {
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, 0, W, H);
-
-  // "You Lose" in red
-  ctx.fillStyle = '#ef4444'; ctx.font = 'bold 48px Arial'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ef4444'; ctx.font = 'bold 48px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 4;
-  ctx.strokeText('You Lose', W/2, H/2 - 40);
-  ctx.fillText('You Lose', W/2, H/2 - 40);
-
-  // Score
+  ctx.strokeText('You Lose', W/2, H/2 - 40); ctx.fillText('You Lose', W/2, H/2 - 40);
   ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '20px Arial';
   ctx.fillText('Score: '+score+'  Coins: +'+coinCount, W/2, H/2 + 5);
-
-  if (highScore > 0) {
-    ctx.fillStyle = 'rgba(255,215,0,0.6)'; ctx.font = '16px Arial';
-    ctx.fillText('Best: '+highScore, W/2, H/2 + 35);
-  }
-
-  // "Tap to restart" in light color
+  if (highScore > 0) { ctx.fillStyle = 'rgba(255,215,0,0.6)'; ctx.font = '16px Arial'; ctx.fillText('Best: '+highScore, W/2, H/2 + 35); }
   const alpha = 0.3 + Math.sin(Date.now()*0.004)*0.2;
   ctx.fillStyle = 'rgba(255,255,255,'+alpha+')'; ctx.font = '16px Arial';
   ctx.fillText('Tap to Restart', W/2, H/2 + 70);
@@ -534,7 +523,7 @@ function update() {
 
 function gameLoop() {
   update();
-  if (gameState === STATE.MENU) { drawMenu(); }
+  if (gameState === STATE.MENU) drawMenu();
   else if (gameState === STATE.PLAYING) {
     drawBackground(); drawPipes(); drawCoins(); drawGround(); drawBird(); drawHUD();
   } else if (gameState === STATE.GAMEOVER) {
@@ -566,7 +555,6 @@ function handleInput(cx, cy) {
       openShop(); return;
     }
   } else if (gameState === STATE.PLAYING) {
-    // Check pause button
     if (mx>=PAUSE_BTN.x && mx<=PAUSE_BTN.x+PAUSE_BTN.w && my>=PAUSE_BTN.y && my<=PAUSE_BTN.y+PAUSE_BTN.h) {
       gameState = STATE.PAUSED; return;
     }
@@ -591,7 +579,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================================
-// SHOP (3-column grid, smaller items, Buy/Equip flow)
+// SHOP (4-column grid, compact, Buy/Equip)
 // ============================================================
 
 const shopOverlay = document.getElementById('shopOverlay');
@@ -615,24 +603,29 @@ function renderShopItems() {
     if (isEquipped) item.classList.add('selected');
     else if (isOwned) item.classList.add('owned');
 
-    // Mini bird preview (smaller)
-    const pc = document.createElement('canvas');
-    pc.width = 36; pc.height = 36;
-    pc.style.margin = '0 auto'; pc.style.display = 'block'; pc.style.borderRadius = '50%';
-    drawMiniBird(pc.getContext('2d'), 18, 18, 14, skin);
+    // Simple colored circle preview (clean, no complex canvas drawing)
+    const circle = document.createElement('div');
+    circle.className = 'bird-circle';
+    if (skin.id === 'rainbow') {
+      circle.style.background = 'linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #5f27cd)';
+    } else if (skin.isSpiderman) {
+      circle.style.background = 'linear-gradient(to bottom, #dc2626 50%, #1e40af 50%)';
+      circle.style.border = '1.5px solid rgba(0,0,0,0.3)';
+    } else {
+      circle.style.background = skin.body;
+    }
 
     const nameDiv = document.createElement('div');
     nameDiv.className = 'name'; nameDiv.textContent = skin.name;
 
-    item.appendChild(pc);
+    item.appendChild(circle);
     item.appendChild(nameDiv);
 
     if (isEquipped) {
       const st = document.createElement('div');
-      st.className = 'status equipped-text'; st.textContent = 'Equipped';
+      st.className = 'status equipped-text'; st.textContent = '✓';
       item.appendChild(st);
     } else if (isOwned) {
-      // Show Equip button
       const btn = document.createElement('button');
       btn.className = 'shop-action-btn btn-equip'; btn.textContent = 'Equip';
       btn.addEventListener('click', (e) => {
@@ -641,9 +634,8 @@ function renderShopItems() {
       });
       item.appendChild(btn);
     } else {
-      // Show price + Buy button
       const priceDiv = document.createElement('div');
-      priceDiv.className = 'price'; priceDiv.textContent = skin.price + ' 🪙';
+      priceDiv.className = 'price'; priceDiv.textContent = skin.price + '🪙';
       item.appendChild(priceDiv);
 
       const btn = document.createElement('button');
@@ -657,57 +649,14 @@ function renderShopItems() {
           shopCoinDisplay.textContent = totalCoins;
           renderShopItems();
         } else {
-          btn.style.background = '#ef4444'; btn.textContent = 'Not enough!';
-          setTimeout(() => { btn.style.background = ''; btn.textContent = 'Buy'; }, 800);
+          btn.style.background = '#ef4444'; btn.textContent = '✗';
+          setTimeout(() => { btn.style.background = ''; btn.textContent = 'Buy'; }, 600);
         }
       });
       item.appendChild(btn);
     }
     shopGrid.appendChild(item);
   });
-}
-
-function drawMiniBird(pctx, cx, cy, r, skin) {
-  const isR = skin.id==='rainbow', isSM = skin.isSpiderman;
-  if (isR) {
-    const g = pctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
-    g.addColorStop(0,'#ff6b6b'); g.addColorStop(0.3,'#feca57'); g.addColorStop(0.6,'#48dbfb'); g.addColorStop(1,'#5f27cd');
-    pctx.fillStyle = g;
-  } else if (isSM) {
-    const g = pctx.createLinearGradient(cx, cy-r, cx, cy+r);
-    g.addColorStop(0,'#dc2626'); g.addColorStop(0.5,'#dc2626'); g.addColorStop(0.5,'#1e40af'); g.addColorStop(1,'#1e40af');
-    pctx.fillStyle = g;
-  } else { pctx.fillStyle = skin.body; }
-  pctx.beginPath(); pctx.arc(cx, cy, r, 0, Math.PI*2); pctx.fill();
-  pctx.strokeStyle = 'rgba(0,0,0,0.2)'; pctx.lineWidth = 1; pctx.stroke();
-
-  if (isSM) {
-    pctx.strokeStyle = 'rgba(0,0,0,0.25)'; pctx.lineWidth = 0.5;
-    pctx.beginPath(); pctx.moveTo(cx, cy-r); pctx.lineTo(cx, cy+r); pctx.stroke();
-  } else {
-    pctx.fillStyle = isR ? '#ffe66d' : skin.belly;
-    pctx.beginPath(); pctx.ellipse(cx, cy+r*0.25, r*0.5, r*0.35, 0, 0, Math.PI*2); pctx.fill();
-  }
-
-  // Eyes
-  pctx.fillStyle = '#fff';
-  pctx.beginPath(); pctx.ellipse(cx-3, cy-2, 3.5, 4, 0, 0, Math.PI*2); pctx.fill();
-  pctx.beginPath(); pctx.ellipse(cx+4, cy-2, 3.5, 4, 0, 0, Math.PI*2); pctx.fill();
-  if (!isSM) {
-    pctx.fillStyle = '#1a1a1a';
-    pctx.beginPath(); pctx.arc(cx-2, cy-1, 1.8, 0, Math.PI*2); pctx.fill();
-    pctx.beginPath(); pctx.arc(cx+5, cy-1, 1.8, 0, Math.PI*2); pctx.fill();
-  }
-
-  // Eyebrows
-  pctx.strokeStyle = isR?'#2d3436':isSM?'#000':skin.brow;
-  pctx.lineWidth = 1.5; pctx.lineCap = 'round';
-  pctx.beginPath(); pctx.moveTo(cx-7, cy-5); pctx.lineTo(cx-1, cy-4); pctx.stroke();
-  pctx.beginPath(); pctx.moveTo(cx+8, cy-5); pctx.lineTo(cx+2, cy-4); pctx.stroke();
-
-  // Beak
-  pctx.fillStyle = skin.beak;
-  pctx.beginPath(); pctx.moveTo(cx+3, cy+1); pctx.lineTo(cx+r+3, cy+1); pctx.lineTo(cx+3, cy+3); pctx.fill();
 }
 
 // ============================================================
